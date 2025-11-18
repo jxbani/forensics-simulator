@@ -1,0 +1,25 @@
+# Frontend Development Dockerfile
+# With hot reload support
+
+FROM node:20-alpine
+
+# Install dumb-init
+RUN apk add --no-cache dumb-init
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including devDependencies)
+RUN npm install
+
+# Expose Vite dev server port
+EXPOSE 5173
+
+# Use dumb-init
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start development server
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

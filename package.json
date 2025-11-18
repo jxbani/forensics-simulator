@@ -1,0 +1,26 @@
+{
+  "name": "forensics-simulator",
+  "version": "1.0.0",
+  "description": "Digital Forensics Training Simulator",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "prisma:generate": "cd backend && npm run prisma:generate",
+    "prisma:migrate": "cd backend && npm run prisma:migrate",
+    "prisma:studio": "cd backend && npm run prisma:studio"
+  },
+  "keywords": [
+    "forensics",
+    "training",
+    "simulator",
+    "education"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
