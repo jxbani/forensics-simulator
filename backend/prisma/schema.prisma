@@ -1,0 +1,217 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model - stores user authentication and profile data
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+
+  // Relations
+  progress      Progress[]
+  userAnswers   UserAnswer[]
+  achievements  Achievement[]
+  uploadedFiles UploadedFile[]
+
+  @@index([email])
+  @@index([username])
+  @@index([role])
+}
+
+// Progress model - tracks user progress through levels
+model Progress {
+  id          String    @id @default(uuid())
+  userId      String
+  level       Int
+  score       Int       @default(0)
+  completedAt DateTime?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, level])
+  @@index([userId])
+  @@index([level])
+}
+
+// Level model - forensics training levels/modules
+model Level {
+  id          String     @id @default(uuid())
+  title       String
+  description String
+  difficulty  Difficulty
+  orderIndex  Int        @unique
+
+  // Relations
+  tasks         Task[]
+  evidenceFiles EvidenceFile[]
+
+  @@index([difficulty])
+  @@index([orderIndex])
+}
+
+// Task model - individual forensics challenges/questions within levels
+model Task {
+  id            String   @id @default(uuid())
+  levelId       String
+  question      String
+  type          TaskType
+  correctAnswer String
+  points        Int      @default(10)
+  hint          String?
+  orderIndex    Int
+
+  // Relations
+  level       Level        @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  userAnswers UserAnswer[]
+
+  @@index([levelId])
+  @@index([type])
+}
+
+// UserAnswer model - stores user's answers to tasks
+model UserAnswer {
+  id         String   @id @default(uuid())
+  userId     String
+  taskId     String
+  answer     String
+  isCorrect  Boolean
+  hintsUsed  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskId])
+  @@index([userId])
+  @@index([taskId])
+  @@index([isCorrect])
+}
+
+// Achievement model - tracks user achievements and milestones
+model Achievement {
+  id              String          @id @default(uuid())
+  userId          String
+  achievementType AchievementType
+  earnedAt        DateTime        @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementType])
+  @@index([userId])
+  @@index([achievementType])
+}
+
+// UploadedFile model - stores metadata for uploaded evidence files
+model UploadedFile {
+  id           String   @id @default(uuid())
+  userId       String
+  taskId       String?
+  originalName String
+  storedName   String   @unique
+  fileType     FileType
+  mimeType     String
+  fileSize     Int
+  filePath     String
+  uploadedAt   DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([taskId])
+  @@index([fileType])
+  @@index([uploadedAt])
+}
+
+// EvidenceFile model - stores evidence files for levels (uploaded by admins)
+model EvidenceFile {
+  id           String   @id @default(uuid())
+  levelId      String
+  originalName String
+  storedName   String   @unique
+  fileType     FileType
+  mimeType     String
+  fileSize     Int
+  filePath     String
+  description  String?
+  uploadedAt   DateTime @default(now())
+
+  // Relations
+  level Level @relation(fields: [levelId], references: [id], onDelete: Cascade)
+
+  @@index([levelId])
+  @@index([fileType])
+  @@index([uploadedAt])
+}
+
+// Enums
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum TaskType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  SHORT_ANSWER
+  FILE_ANALYSIS
+  COMMAND_LINE
+  NETWORK_ANALYSIS
+  MEMORY_FORENSICS
+  DISK_FORENSICS
+  LOG_ANALYSIS
+}
+
+enum AchievementType {
+  FIRST_LEVEL_COMPLETE
+  FIVE_LEVELS_COMPLETE
+  TEN_LEVELS_COMPLETE
+  ALL_LEVELS_COMPLETE
+  PERFECT_SCORE
+  SPEED_DEMON
+  NO_HINTS_USED
+  BEGINNER_MASTER
+  INTERMEDIATE_MASTER
+  ADVANCED_MASTER
+  EXPERT_MASTER
+  STREAK_FIVE
+  STREAK_TEN
+  STREAK_TWENTY
+  FIRST_CORRECT_ANSWER
+  HUNDRED_TASKS_COMPLETE
+}
+
+enum FileType {
+  PCAP              // Network packet capture (.pcap, .pcapng)
+  MEMORY_DUMP       // Memory dumps (.raw, .mem, .dmp, .vmem)
+  DISK_IMAGE        // Disk images (.dd, .img, .e01, .raw)
+  LOG_FILE          // Log files (.log, .txt, .evtx)
+  EXECUTABLE        // Executable files (.exe, .dll, .elf, .bin)
+  DOCUMENT          // Documents (.pdf, .docx, .xlsx)
+  COMPRESSED        // Compressed archives (.zip, .tar, .gz, .7z)
+  OTHER             // Other file types
+}
+
+enum UserRole {
+  USER              // Regular user
+  ADMIN             // Administrator with full access
+  MODERATOR         // Moderator with limited admin access
+}
