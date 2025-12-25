@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import levelService from '../services/levelService';
 import progressService from '../services/progressService';
+import leaderboardService from '../services/leaderboardService';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -20,6 +21,13 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
+
+    // Set up interval to refresh data periodically for real-time updates
+    const refreshInterval = setInterval(() => {
+      fetchDashboardData();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(refreshInterval);
   }, []);
 
   const fetchDashboardData = async () => {
@@ -27,14 +35,22 @@ const Dashboard = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch levels and progress in parallel
-      const [levelsData, progressData] = await Promise.all([
+      // Fetch levels, progress, and leaderboard in parallel
+      const [levelsData, progressData, leaderboardData] = await Promise.all([
         levelService.getAllLevels(),
         progressService.getUserProgress(),
+        leaderboardService.getGlobalLeaderboard(100), // Fetch leaderboard to get user's rank
       ]);
 
       setLevels(levelsData.levels || []);
-      setStats(progressData);
+
+      // Merge progress data with rank from leaderboard
+      const statsWithRank = {
+        ...progressData,
+        rank: leaderboardData.userRank?.rank || null,
+      };
+
+      setStats(statsWithRank);
     } catch (err) {
       setError(err.message);
       console.error('Error fetching dashboard data:', err);
@@ -364,17 +380,26 @@ const Dashboard = () => {
                       <BookOpen className="w-4 h-4" />
                       {level.taskCount || 0} Tasks
                     </span>
-                    <span className="flex items-center gap-1">
-                      <Trophy className="w-4 h-4" />
-                      {level.maxScore || 0} Points
-                    </span>
                   </div>
 
-                  {completed && score > 0 && (
-                    <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  {/* Show score if user has any progress, regardless of completion */}
+                  {score > 0 && (
+                    <div className={`mb-4 p-3 rounded-lg border ${
+                      completed
+                        ? 'bg-green-500/10 border-green-500/20'
+                        : 'bg-blue-500/10 border-blue-500/20'
+                    }`}>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-green-300 font-medium">Your Score:</span>
-                        <span className="text-green-400 font-bold">{score} points</span>
+                        <span className={`font-medium ${
+                          completed ? 'text-green-300' : 'text-blue-300'
+                        }`}>
+                          {completed ? 'Final Score:' : 'Current Score:'}
+                        </span>
+                        <span className={`font-bold ${
+                          completed ? 'text-green-400' : 'text-blue-400'
+                        }`}>
+                          {score} points
+                        </span>
                       </div>
                     </div>
                   )}
